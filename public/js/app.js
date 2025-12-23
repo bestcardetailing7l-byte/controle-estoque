@@ -522,11 +522,35 @@ function openMovementModal(type) {
     };
     document.getElementById('movementModalTitle').textContent = titles[type];
 
-    // Show/hide cost field
+    // Show/hide cost and supplier fields (only for entry)
     const costGroup = document.getElementById('movementCostGroup');
+    const supplierGroup = document.getElementById('movementSupplierGroup');
     costGroup.classList.toggle('hidden', type !== 'entry');
+    supplierGroup.classList.toggle('hidden', type !== 'entry');
+
+    // Load suppliers for entry modal
+    if (type === 'entry') {
+        loadMovementSupplierOptions();
+    }
 
     openModal('movementModal');
+}
+
+async function loadMovementSupplierOptions() {
+    try {
+        const response = await api('/api/suppliers');
+        if (!response.ok) return;
+
+        const suppliersList = await response.json();
+
+        const select = document.getElementById('movementSupplier');
+        select.innerHTML = '<option value="">Nenhum / Não informar</option>';
+        suppliersList.forEach(s => {
+            select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        });
+    } catch (error) {
+        console.error('Error loading suppliers:', error);
+    }
 }
 
 async function saveMovement() {
@@ -534,6 +558,7 @@ async function saveMovement() {
     const productId = document.getElementById('movementProduct').value;
     const quantity = parseFloat(document.getElementById('movementQuantity').value);
     const unitCost = parseFloat(document.getElementById('movementCost').value) || 0;
+    const supplierId = document.getElementById('movementSupplier').value;
     const notes = document.getElementById('movementNotes').value;
 
     if (!productId || !quantity) {
@@ -542,14 +567,21 @@ async function saveMovement() {
     }
 
     try {
+        const body = {
+            product_id: parseInt(productId),
+            quantity,
+            unit_cost: unitCost,
+            notes
+        };
+
+        // Add supplier_id only for entries
+        if (type === 'entry' && supplierId) {
+            body.supplier_id = parseInt(supplierId);
+        }
+
         const response = await api(`/api/movements/${type}`, {
             method: 'POST',
-            body: JSON.stringify({
-                product_id: parseInt(productId),
-                quantity,
-                unit_cost: unitCost,
-                notes
-            })
+            body: JSON.stringify(body)
         });
 
         if (!response.ok) {
@@ -557,11 +589,20 @@ async function saveMovement() {
             throw new Error(error.error);
         }
 
-        const typeLabels = { entry: 'Entrada', exit: 'Saída', loss: 'Perda' };
-        showToast(`${typeLabels[type]} registrada com sucesso!`);
+        const result = await response.json();
+
+        // Show average cost info for entries
+        if (type === 'entry' && result.newAverageCost !== undefined) {
+            showToast(`Entrada registrada! Novo custo médio: R$ ${result.newAverageCost.toFixed(2)}`);
+        } else {
+            const typeLabels = { entry: 'Entrada', exit: 'Saída', loss: 'Perda' };
+            showToast(`${typeLabels[type]} registrada com sucesso!`);
+        }
+
         closeModal('movementModal');
         loadMovements();
         loadDashboard();
+        loadProducts(); // Refresh products to show new average cost
     } catch (error) {
         showToast(error.message, 'error');
     }

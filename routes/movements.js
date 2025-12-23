@@ -3,10 +3,10 @@ const router = express.Router();
 const db = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
 
-// Entry (add stock)
+// Entry (add stock) - with weighted average cost and optional supplier
 router.post('/entry', authenticateToken, async (req, res) => {
     try {
-        const { product_id, quantity, unit_cost, notes } = req.body;
+        const { product_id, quantity, unit_cost, supplier_id, notes } = req.body;
 
         if (!product_id || !quantity || quantity <= 0) {
             return res.status(400).json({ error: 'Produto e quantidade válida são obrigatórios' });
@@ -17,19 +17,42 @@ router.post('/entry', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Produto não encontrado' });
         }
 
+        // Get entry cost (use provided or product's current cost)
+        const entryCost = unit_cost || product.cost_price || 0;
+
+        // Calculate weighted average cost
+        const currentValue = product.quantity * product.cost_price;
+        const entryValue = quantity * entryCost;
+        const newQuantity = product.quantity + quantity;
+        const newCostPrice = newQuantity > 0
+            ? parseFloat(((currentValue + entryValue) / newQuantity).toFixed(2))
+            : entryCost;
+
+        // Build notes with supplier info if provided
+        let fullNotes = notes || '';
+        if (supplier_id) {
+            const supplier = await db.get('SELECT name FROM suppliers WHERE id = ?', [supplier_id]);
+            if (supplier) {
+                fullNotes = `Fornecedor: ${supplier.name}${notes ? ' | ' + notes : ''}`;
+            }
+        }
+
         // Create movement
         await db.run(`
       INSERT INTO movements (product_id, type, quantity, unit_cost, notes)
       VALUES (?, 'entry', ?, ?, ?)
-    `, [product_id, quantity, unit_cost || product.cost_price, notes || '']);
+    `, [product_id, quantity, entryCost, fullNotes]);
 
-        // Update stock
-        const newQuantity = product.quantity + quantity;
-        const newCostPrice = unit_cost || product.cost_price;
+        // Update stock with weighted average cost
         await db.run('UPDATE products SET quantity = ?, cost_price = ? WHERE id = ?', [newQuantity, newCostPrice, product_id]);
 
         const updatedProduct = await db.get('SELECT * FROM products WHERE id = ?', [product_id]);
-        res.json({ message: 'Entrada registrada com sucesso', product: updatedProduct });
+        res.json({
+            message: 'Entrada registrada com sucesso',
+            product: updatedProduct,
+            previousCost: product.cost_price,
+            newAverageCost: newCostPrice
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Erro ao registrar entrada' });
