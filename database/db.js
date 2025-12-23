@@ -180,7 +180,7 @@ class DatabaseAdapter {
         // Default Admin User
         const admin = await this.get('SELECT id FROM users WHERE username = ?', ['admin']);
         if (!admin) {
-            const bcrypt = require('bcrypt');
+            const bcrypt = require('bcryptjs');
             const passwordHash = await bcrypt.hash('admin123', 10);
             await this.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', ['admin', passwordHash]);
             console.log('✅ Admin user created');
