@@ -989,6 +989,31 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('restoreBackupBtn').addEventListener('click', restoreBackup);
     document.getElementById('backupBtn').addEventListener('click', createBackup);
 
+    // Mobile Menu
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const sidebar = document.getElementById('sidebar');
+
+    function toggleMobileMenu() {
+        mobileMenuBtn.classList.toggle('active');
+        mobileOverlay.classList.toggle('active');
+        sidebar.classList.toggle('active');
+    }
+
+    function closeMobileMenu() {
+        mobileMenuBtn.classList.remove('active');
+        mobileOverlay.classList.remove('active');
+        sidebar.classList.remove('active');
+    }
+
+    mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+    mobileOverlay.addEventListener('click', closeMobileMenu);
+
+    // Close mobile menu when navigating
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', closeMobileMenu);
+    });
+
     // Load initial data
     loadSupplierOptions();
     loadDashboard();
