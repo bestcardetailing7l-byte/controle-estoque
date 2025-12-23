@@ -489,10 +489,23 @@ async function loadProductOptions() {
         const select = document.getElementById('movementProduct');
         select.innerHTML = '<option value="">Selecione um produto</option>';
         products.forEach(p => {
-            select.innerHTML += `<option value="${p.id}">${p.sku} - ${p.name} (${p.quantity} ${p.unit_type === 'weight' ? 'kg' : 'un'})</option>`;
+            const unitLabel = p.unit_type === 'weight' ? 'kg' : 'un';
+            select.innerHTML += `<option value="${p.id}" data-cost="${p.cost_price}" data-unit="${p.unit_type}">${p.sku} - ${p.name} (${p.quantity} ${unitLabel})</option>`;
         });
     } catch (error) {
         console.error('Error loading products:', error);
+    }
+}
+
+// Auto-fill cost when product is selected in entry modal
+function onMovementProductChange() {
+    const select = document.getElementById('movementProduct');
+    const selectedOption = select.options[select.selectedIndex];
+    const movementType = document.getElementById('movementType').value;
+
+    if (movementType === 'entry' && selectedOption && selectedOption.dataset.cost) {
+        const costField = document.getElementById('movementCost');
+        costField.value = parseFloat(selectedOption.dataset.cost).toFixed(2);
     }
 }
 
@@ -954,6 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('addExitBtn').addEventListener('click', () => openMovementModal('exit'));
     document.getElementById('addLossBtn').addEventListener('click', () => openMovementModal('loss'));
     document.getElementById('saveMovementBtn').addEventListener('click', saveMovement);
+    document.getElementById('movementProduct').addEventListener('change', onMovementProductChange);
     document.getElementById('periodFilter').addEventListener('change', (e) => {
         document.getElementById('customDateFilter').classList.toggle('hidden', e.target.value !== 'custom');
     });
