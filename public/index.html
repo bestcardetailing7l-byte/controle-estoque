@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Controle de Estoque</title>
+    <meta name="description" content="Sistema de Controle de Estoque para Estética Automotiva">
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <span>🚗</span>
+                <span>Estética Auto</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-item active" data-section="dashboard">
+                    <span>📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item" data-section="products">
+                    <span>📦</span>
+                    <span>Produtos</span>
+                </div>
+                <div class="nav-item" data-section="suppliers">
+                    <span>🏢</span>
+                    <span>Fornecedores</span>
+                </div>
+                <div class="nav-item" data-section="movements">
+                    <span>📋</span>
+                    <span>Movimentações</span>
+                </div>
+                <div class="nav-item" data-section="reports">
+                    <span>📈</span>
+                    <span>Relatórios</span>
+                </div>
+                <div class="nav-item" data-section="settings">
+                    <span>⚙️</span>
+                    <span>Configurações</span>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">A</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">Admin</div>
+                        <div class="user-role">Administrador</div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-full" id="logoutBtn">
+                    <span>🚪</span>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboardSection" class="section active">
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-secondary" id="backupBtn">
+                            <span>💾</span>
+                            <span>Backup</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon primary">📦</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="totalProducts">0</div>
+                            <div class="stat-label">Total de Produtos</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon success">💰</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="stockValue">R$ 0,00</div>
+                            <div class="stat-label">Valor em Estoque</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon warning">⚠️</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="lowStockCount">0</div>
+                            <div class="stat-label">Estoque Baixo</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" id="comparisonIcon">📊</div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="monthComparison">R$ 0,00</div>
+                            <div class="stat-label">Gastos este mês</div>
+                            <div class="stat-trend" id="comparisonTrend"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <h3 class="mb-2">⚡ Ações Rápidas</h3>
+                <div class="quick-actions">
+                    <div class="quick-action-btn primary" data-action="quick-exit">
+                        <div class="icon">📤</div>
+                        <div class="label">Saída Rápida</div>
+                    </div>
+                    <div class="quick-action-btn success" data-action="quick-entry">
+                        <div class="icon">📥</div>
+                        <div class="label">Entrada</div>
+                    </div>
+                    <div class="quick-action-btn warning" data-action="quick-loss">
+                        <div class="icon">⚠️</div>
+                        <div class="label">Registrar Perda</div>
+                    </div>
+                    <div class="quick-action-btn" data-action="add-product">
+                        <div class="icon" style="background: var(--info);">➕</div>
+                        <div class="label">Novo Produto</div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Grid -->
+                <div class="grid-2 mt-3">
+                    <!-- Low Stock Alerts -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">⚠️ Alertas de Estoque Baixo</h3>
+                        </div>
+                        <div class="low-stock-list" id="lowStockList">
+                            <p class="text-muted text-center">Nenhum produto com estoque baixo</p>
+                        </div>
+                    </div>
+
+                    <!-- Recent Movements -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📋 Movimentações Recentes</h3>
+                        </div>
+                        <div class="movement-list" id="recentMovements">
+                            <p class="text-muted text-center">Nenhuma movimentação recente</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Products Section -->
+            <section id="productsSection" class="section">
+                <div class="page-header">
+                    <h1 class="page-title">Produtos</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" id="addProductBtn">
+                            <span>➕</span>
+                            <span>Novo Produto</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filters-bar">
+                    <input type="text" class="search-input" id="productSearch" placeholder="Pesquisar produtos...">
+                    <div class="filter-group">
+                        <label>Fornecedor:</label>
+                        <select id="supplierFilter">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="lowStockFilter">
+                            Estoque baixo
+                        </label>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Produto</th>
+                                    <th>Tipo</th>
+                                    <th>Quantidade</th>
+                                    <th>Custo</th>
+                                    <th>Valor Total</th>
+                                    <th>Fornecedor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Suppliers Section -->
+            <section id="suppliersSection" class="section">
+                <div class="page-header">
+                    <h1 class="page-title">Fornecedores</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" id="addSupplierBtn">
+                            <span>➕</span>
+                            <span>Novo Fornecedor</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filters-bar">
+                    <input type="text" class="search-input" id="supplierSearch" placeholder="Pesquisar fornecedores...">
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Contato</th>
+                                    <th>Telefone</th>
+                                    <th>Email</th>
+                                    <th>Endereço</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="suppliersTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Movements Section -->
+            <section id="movementsSection" class="section">
+                <div class="page-header">
+                    <h1 class="page-title">Movimentações</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-success" id="addEntryBtn">
+                            <span>📥</span>
+                            <span>Entrada</span>
+                        </button>
+                        <button class="btn btn-primary" id="addExitBtn">
+                            <span>📤</span>
+                            <span>Saída</span>
+                        </button>
+                        <button class="btn btn-warning" id="addLossBtn">
+                            <span>⚠️</span>
+                            <span>Perda</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filters-bar">
+                    <div class="filter-group">
+                        <label>Período:</label>
+                        <select id="periodFilter">
+                            <option value="">Todos</option>
+                            <option value="daily">Hoje</option>
+                            <option value="weekly">Última semana</option>
+                            <option value="biweekly">Últimos 15 dias</option>
+                            <option value="monthly">Último mês</option>
+                            <option value="custom">Personalizado</option>
+                        </select>
+                    </div>
+                    <div class="filter-group hidden" id="customDateFilter">
+                        <label>De:</label>
+                        <input type="date" id="startDate">
+                        <label>Até:</label>
+                        <input type="date" id="endDate">
+                    </div>
+                    <div class="filter-group">
+                        <label>Tipo:</label>
+                        <select id="typeFilter">
+                            <option value="">Todos</option>
+                            <option value="entry">Entrada</option>
+                            <option value="exit">Saída</option>
+                            <option value="loss">Perda</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" id="applyFilters">Aplicar</button>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Produto</th>
+                                    <th>SKU</th>
+                                    <th>Tipo</th>
+                                    <th>Quantidade</th>
+                                    <th>Custo Unit.</th>
+                                    <th>Total</th>
+                                    <th>Observações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movementsTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reportsSection" class="section">
+                <div class="page-header">
+                    <h1 class="page-title">Relatórios</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-success" id="exportInventoryBtn">
+                            <span>📊</span>
+                            <span>Exportar Inventário</span>
+                        </button>
+                        <button class="btn btn-secondary" id="exportMovementsBtn">
+                            <span>📋</span>
+                            <span>Exportar Movimentações</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Monthly Comparison Chart -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h3 class="card-title">📈 Comparativo Mensal de Gastos</h3>
+                    </div>
+                    <div class="chart-container" id="expensesChart"></div>
+                </div>
+
+                <!-- Inventory Report -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📦 Relatório de Inventário</h3>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Produto</th>
+                                    <th>Quantidade</th>
+                                    <th>Custo Unit.</th>
+                                    <th>Valor Total</th>
+                                    <th>Entradas</th>
+                                    <th>Saídas</th>
+                                    <th>Perdas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTable">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer mt-2">
+                        <strong>Valor Total em Estoque: <span id="inventoryTotalValue">R$ 0,00</span></strong>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settingsSection" class="section">
+                <div class="page-header">
+                    <h1 class="page-title">Configurações</h1>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">🔐 Alterar Senha</h3>
+                        </div>
+                        <form id="changePasswordForm">
+                            <div class="form-group">
+                                <label for="currentPassword">Senha Atual</label>
+                                <input type="password" id="currentPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">Nova Senha</label>
+                                <input type="password" id="newPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirmar Nova Senha</label>
+                                <input type="password" id="confirmPassword" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Alterar Senha</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">💾 Backups</h3>
+                        </div>
+                        <button class="btn btn-success mb-2" id="createBackupBtn">
+                            <span>💾</span>
+                            <span>Criar Backup Agora</span>
+                        </button>
+                        <div id="backupsList">
+                            <p class="text-muted">Carregando backups...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Product Modal -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="productModalTitle">Novo Produto</h3>
+                <button class="modal-close" data-close="productModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm">
+                    <input type="hidden" id="productId">
+                    <div class="form-group">
+                        <label for="productName">Nome *</label>
+                        <input type="text" id="productName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productDescription">Descrição</label>
+                        <textarea id="productDescription" rows="2"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productUnitType">Tipo de Unidade</label>
+                            <select id="productUnitType">
+                                <option value="unit">Unidade</option>
+                                <option value="weight">Peso (kg)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="productCostPrice">Preço de Custo</label>
+                            <input type="number" id="productCostPrice" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="productMinStock">Estoque Mínimo</label>
+                            <input type="number" id="productMinStock" step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="productSupplier">Fornecedor</label>
+                            <select id="productSupplier">
+                                <option value="">Nenhum</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-close="productModal">Cancelar</button>
+                <button class="btn btn-primary" id="saveProductBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supplier Modal -->
+    <div class="modal-overlay" id="supplierModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="supplierModalTitle">Novo Fornecedor</h3>
+                <button class="modal-close" data-close="supplierModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="supplierForm">
+                    <input type="hidden" id="supplierId">
+                    <div class="form-group">
+                        <label for="supplierName">Nome *</label>
+                        <input type="text" id="supplierName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="supplierContact">Contato</label>
+                        <input type="text" id="supplierContact">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="supplierPhone">Telefone</label>
+                            <input type="tel" id="supplierPhone">
+                        </div>
+                        <div class="form-group">
+                            <label for="supplierEmail">Email</label>
+                            <input type="email" id="supplierEmail">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="supplierAddress">Endereço</label>
+                        <textarea id="supplierAddress" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-close="supplierModal">Cancelar</button>
+                <button class="btn btn-primary" id="saveSupplierBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Movement Modal -->
+    <div class="modal-overlay" id="movementModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="movementModalTitle">Registrar Movimentação</h3>
+                <button class="modal-close" data-close="movementModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="movementForm">
+                    <input type="hidden" id="movementType">
+                    <div class="form-group">
+                        <label for="movementProduct">Produto *</label>
+                        <select id="movementProduct" required>
+                            <option value="">Selecione um produto</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="movementQuantity">Quantidade *</label>
+                            <input type="number" id="movementQuantity" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group" id="movementCostGroup">
+                            <label for="movementCost">Custo Unitário</label>
+                            <input type="number" id="movementCost" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="movementNotes">Observações</label>
+                        <textarea id="movementNotes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-close="movementModal">Cancelar</button>
+                <button class="btn btn-primary" id="saveMovementBtn">Registrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>

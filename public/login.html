@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Controle de Estoque</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="login-icon">🚗</div>
+        <h1>Estética Automotiva</h1>
+        <p>Controle de Estoque</p>
+      </div>
+      
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input type="text" id="username" name="username" required autocomplete="username">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" required autocomplete="current-password">
+        </div>
+        
+        <div id="loginError" class="error-message hidden"></div>
+        
+        <button type="submit" class="btn btn-primary btn-full">
+          <span>Entrar</span>
+          <span class="btn-loading hidden">Entrando...</span>
+        </button>
+      </form>
+    </div>
+    
+    <div class="login-footer">
+      <p>Sistema de Controle de Estoque v1.0</p>
+    </div>
+  </div>
+  
+  <script src="js/auth.js"></script>
+</body>
+</html>

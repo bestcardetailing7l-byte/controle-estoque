@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: controle-estoque
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: stock-db
+    plan: free
+    databaseName: stock
+    user: stock_user
+
+# Link the database to the service
+serviceBindings:
+  - from: stock-db
+    to: controle-estoque
+    envVarName: DATABASE_URL
