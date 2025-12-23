@@ -670,16 +670,86 @@ async function loadBackups() {
 }
 
 async function createBackup() {
-    try {
-        const response = await api('/api/reports/backup', { method: 'POST' });
-        if (!response.ok) throw new Error('Erro ao criar backup');
+    // Show password prompt
+    const password = prompt('Digite sua senha para confirmar o backup:');
+    if (!password) return;
 
-        const data = await response.json();
-        showToast(`Backup criado: ${data.filename}`);
-        loadBackups();
+    try {
+        const response = await fetch('/api/reports/backup-excel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({ password })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error);
+        }
+
+        // Download the file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `backup_completo_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        showToast('Backup criado e baixado com sucesso!');
     } catch (error) {
-        showToast('Erro ao criar backup', 'error');
+        showToast(error.message || 'Erro ao criar backup', 'error');
     }
+}
+
+async function restoreBackup() {
+    // Create file input
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.xlsx,.xls';
+
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const password = prompt('Digite sua senha para confirmar a restauração:');
+        if (!password) return;
+
+        if (!confirm('ATENÇÃO: Isso vai adicionar os dados do arquivo ao sistema. Deseja continuar?')) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('password', password);
+
+            const response = await fetch('/api/reports/restore-excel', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error);
+            }
+
+            const data = await response.json();
+            showToast(`Restauração concluída! Produtos: ${data.restored.products}, Fornecedores: ${data.restored.suppliers}, Movimentações: ${data.restored.movements}`);
+
+            // Reload current section
+            loadDashboard();
+        } catch (error) {
+            showToast(error.message || 'Erro ao restaurar backup', 'error');
+        }
+    };
+
+    fileInput.click();
 }
 
 async function changePassword(e) {
@@ -801,6 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings
     document.getElementById('changePasswordForm').addEventListener('submit', changePassword);
     document.getElementById('createBackupBtn').addEventListener('click', createBackup);
+    document.getElementById('restoreBackupBtn').addEventListener('click', restoreBackup);
     document.getElementById('backupBtn').addEventListener('click', createBackup);
 
     // Load initial data
