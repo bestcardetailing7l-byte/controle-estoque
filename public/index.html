@@ -256,6 +256,10 @@
                             <span>⚠️</span>
                             <span>Perda</span>
                         </button>
+                        <button class="btn btn-secondary" id="addExitReturnBtn">
+                            <span>🔄</span>
+                            <span>Saída + Retorno</span>
+                        </button>
                     </div>
                 </div>
 
@@ -545,6 +549,51 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-close="movementModal">Cancelar</button>
                 <button class="btn btn-primary" id="saveMovementBtn">Registrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exit Return Modal -->
+    <div class="modal-overlay" id="exitReturnModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">🔄 Saída com Retorno</h3>
+                <button class="modal-close" data-close="exitReturnModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="exitReturnForm">
+                    <div class="form-group">
+                        <label for="exitReturnProduct">Produto *</label>
+                        <select id="exitReturnProduct" required>
+                            <option value="">Selecione um produto</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quantityOut">Saiu com *</label>
+                            <input type="number" id="quantityOut" step="0.001" min="0.001" required
+                                placeholder="Ex: 0.408">
+                        </div>
+                        <div class="form-group">
+                            <label for="quantityReturn">Retornou com *</label>
+                            <input type="number" id="quantityReturn" step="0.001" min="0" required
+                                placeholder="Ex: 0.363">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="consumedQuantity">Consumo (calculado automaticamente)</label>
+                        <input type="text" id="consumedQuantity" readonly class="consumption-display"
+                            placeholder="0.000">
+                    </div>
+                    <div class="form-group">
+                        <label for="exitReturnNotes">Observações</label>
+                        <textarea id="exitReturnNotes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-close="exitReturnModal">Cancelar</button>
+                <button class="btn btn-primary" id="saveExitReturnBtn">Registrar</button>
             </div>
         </div>
     </div>

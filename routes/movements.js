@@ -108,6 +108,64 @@ router.post('/loss', authenticateToken, async (req, res) => {
     }
 });
 
+// Exit with Return (saída com retorno - calcula consumo automaticamente)
+router.post('/exit-return', authenticateToken, async (req, res) => {
+    try {
+        const { product_id, quantity_out, quantity_return, notes } = req.body;
+
+        if (!product_id || quantity_out === undefined || quantity_return === undefined) {
+            return res.status(400).json({ error: 'Produto, quantidade de saída e retorno são obrigatórios' });
+        }
+
+        if (quantity_out <= 0 || quantity_return < 0) {
+            return res.status(400).json({ error: 'Quantidades devem ser valores válidos' });
+        }
+
+        if (quantity_return > quantity_out) {
+            return res.status(400).json({ error: 'Quantidade de retorno não pode ser maior que a saída' });
+        }
+
+        const product = await db.get('SELECT * FROM products WHERE id = ?', [product_id]);
+        if (!product) {
+            return res.status(404).json({ error: 'Produto não encontrado' });
+        }
+
+        // Calculate consumption
+        const consumed = parseFloat((quantity_out - quantity_return).toFixed(3));
+
+        if (consumed <= 0) {
+            return res.status(400).json({ error: 'Consumo deve ser maior que zero' });
+        }
+
+        if (product.quantity < consumed) {
+            return res.status(400).json({ error: 'Quantidade insuficiente em estoque' });
+        }
+
+        // Build detailed notes
+        const detailedNotes = `Saiu: ${quantity_out}${product.unit_type === 'weight' ? 'kg' : 'un'} | Retornou: ${quantity_return}${product.unit_type === 'weight' ? 'kg' : 'un'} | Consumo: ${consumed}${product.unit_type === 'weight' ? 'kg' : 'un'}${notes ? ' | ' + notes : ''}`;
+
+        // Create movement as 'exit' type
+        await db.run(`
+      INSERT INTO movements (product_id, type, quantity, unit_cost, notes)
+      VALUES (?, 'exit', ?, ?, ?)
+    `, [product_id, consumed, product.cost_price, detailedNotes]);
+
+        // Update stock
+        const newQuantity = parseFloat((product.quantity - consumed).toFixed(3));
+        await db.run('UPDATE products SET quantity = ? WHERE id = ?', [newQuantity, product_id]);
+
+        const updatedProduct = await db.get('SELECT * FROM products WHERE id = ?', [product_id]);
+        res.json({
+            message: 'Saída com retorno registrada com sucesso',
+            product: updatedProduct,
+            consumed: consumed
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao registrar saída com retorno' });
+    }
+});
+
 // Get movements with filters
 router.get('/', authenticateToken, async (req, res) => {
     try {

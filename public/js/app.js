@@ -554,6 +554,101 @@ async function saveMovement() {
     }
 }
 
+// ===== EXIT WITH RETURN =====
+function openExitReturnModal() {
+    loadExitReturnProductOptions();
+    document.getElementById('exitReturnForm').reset();
+    document.getElementById('consumedQuantity').value = '';
+    openModal('exitReturnModal');
+}
+
+async function loadExitReturnProductOptions() {
+    try {
+        const response = await api('/api/products');
+        if (!response.ok) return;
+
+        const productsList = await response.json();
+
+        const select = document.getElementById('exitReturnProduct');
+        select.innerHTML = '<option value="">Selecione um produto</option>';
+        productsList.forEach(p => {
+            select.innerHTML += `<option value="${p.id}" data-unit="${p.unit_type}">${p.sku} - ${p.name} (${p.quantity} ${p.unit_type === 'weight' ? 'kg' : 'un'})</option>`;
+        });
+    } catch (error) {
+        console.error('Error loading products:', error);
+    }
+}
+
+function calculateConsumption() {
+    const quantityOut = parseFloat(document.getElementById('quantityOut').value) || 0;
+    const quantityReturn = parseFloat(document.getElementById('quantityReturn').value) || 0;
+
+    const consumed = Math.max(0, quantityOut - quantityReturn);
+    const consumedField = document.getElementById('consumedQuantity');
+
+    if (quantityOut > 0) {
+        consumedField.value = consumed.toFixed(3);
+
+        // Visual feedback
+        if (consumed > 0) {
+            consumedField.style.color = 'var(--success)';
+            consumedField.style.fontWeight = 'bold';
+        } else {
+            consumedField.style.color = 'var(--danger)';
+        }
+    } else {
+        consumedField.value = '';
+    }
+}
+
+async function saveExitReturn() {
+    const productId = document.getElementById('exitReturnProduct').value;
+    const quantityOut = parseFloat(document.getElementById('quantityOut').value);
+    const quantityReturn = parseFloat(document.getElementById('quantityReturn').value);
+    const notes = document.getElementById('exitReturnNotes').value;
+
+    if (!productId || !quantityOut || quantityReturn === undefined || isNaN(quantityReturn)) {
+        showToast('Preencha todos os campos obrigatórios', 'error');
+        return;
+    }
+
+    if (quantityReturn > quantityOut) {
+        showToast('Quantidade de retorno não pode ser maior que a saída', 'error');
+        return;
+    }
+
+    const consumed = quantityOut - quantityReturn;
+    if (consumed <= 0) {
+        showToast('Consumo deve ser maior que zero', 'error');
+        return;
+    }
+
+    try {
+        const response = await api('/api/movements/exit-return', {
+            method: 'POST',
+            body: JSON.stringify({
+                product_id: parseInt(productId),
+                quantity_out: quantityOut,
+                quantity_return: quantityReturn,
+                notes
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error);
+        }
+
+        const result = await response.json();
+        showToast(`Saída com retorno registrada! Consumo: ${result.consumed}`);
+        closeModal('exitReturnModal');
+        loadMovements();
+        loadDashboard();
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
 // ===== REPORTS =====
 async function loadReports() {
     try {
@@ -863,6 +958,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('customDateFilter').classList.toggle('hidden', e.target.value !== 'custom');
     });
     document.getElementById('applyFilters').addEventListener('click', loadMovements);
+
+    // Exit Return
+    document.getElementById('addExitReturnBtn').addEventListener('click', openExitReturnModal);
+    document.getElementById('saveExitReturnBtn').addEventListener('click', saveExitReturn);
+    document.getElementById('quantityOut').addEventListener('input', calculateConsumption);
+    document.getElementById('quantityReturn').addEventListener('input', calculateConsumption);
 
     // Reports
     document.getElementById('exportInventoryBtn').addEventListener('click', () => exportToExcel('inventory'));
