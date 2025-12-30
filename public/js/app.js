@@ -199,24 +199,32 @@ async function loadProducts() {
             return;
         }
 
-        tbody.innerHTML = products.map(p => `
-      <tr>
+        tbody.innerHTML = products.map(p => {
+            const isInactive = p.is_active === 0;
+            const rowClass = isInactive ? 'class="inactive-row"' : '';
+            const toggleIcon = isInactive ? '✅' : '⏸️';
+            const toggleTitle = isInactive ? 'Reativar' : 'Desativar';
+
+            return `
+      <tr ${rowClass}>
         <td><span class="badge badge-info">${p.sku}</span></td>
-        <td>${p.name}</td>
+        <td>${p.name}${isInactive ? ' <span class="badge badge-warning">Inativo</span>' : ''}</td>
         <td>${p.unit_type === 'weight' ? 'Peso (kg)' : 'Unidade'}</td>
         <td>
-          <span class="${p.quantity <= p.min_stock ? 'text-danger' : ''}">${p.quantity}</span>
-          ${p.quantity <= p.min_stock ? '<span class="badge badge-danger ml-1">Baixo</span>' : ''}
+          <span class="${p.quantity <= p.min_stock && !isInactive ? 'text-danger' : ''}">${p.quantity}</span>
+          ${p.quantity <= p.min_stock && !isInactive ? '<span class="badge badge-danger ml-1">Baixo</span>' : ''}
         </td>
         <td>${formatCurrency(p.cost_price)}</td>
         <td>${formatCurrency(p.quantity * p.cost_price)}</td>
         <td>${p.supplier_name || '-'}</td>
         <td>
-          <button class="btn btn-sm btn-secondary" onclick="editProduct(${p.id})">✏️</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">🗑️</button>
+          <button class="btn btn-sm btn-secondary" onclick="editProduct(${p.id})" title="Editar">✏️</button>
+          <button class="btn btn-sm ${isInactive ? 'btn-success' : 'btn-warning'}" onclick="toggleProductActive(${p.id})" title="${toggleTitle}">${toggleIcon}</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})" title="Excluir">🗑️</button>
         </td>
       </tr>
-    `).join('');
+    `;
+        }).join('');
     } catch (error) {
         console.error('Error loading products:', error);
         showToast('Erro ao carregar produtos', 'error');
@@ -286,6 +294,12 @@ async function saveProduct() {
         supplier_id: document.getElementById('productSupplier').value || null
     };
 
+    // Prevent double-click
+    const saveBtn = document.getElementById('saveProductBtn');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+
     try {
         const response = await api(`/api/products${id ? `/${id}` : ''}`, {
             method: id ? 'PUT' : 'POST',
@@ -302,6 +316,9 @@ async function saveProduct() {
         loadProducts();
     } catch (error) {
         showToast(error.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar';
     }
 }
 
@@ -320,6 +337,23 @@ async function deleteProduct(id) {
         loadProducts();
     } catch (error) {
         showToast('Erro ao excluir produto', 'error');
+    }
+}
+
+async function toggleProductActive(id) {
+    try {
+        const response = await api(`/api/products/${id}/toggle-active`, { method: 'PATCH' });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error);
+        }
+
+        const result = await response.json();
+        showToast(result.message);
+        loadProducts();
+        loadDashboard();
+    } catch (error) {
+        showToast(error.message, 'error');
     }
 }
 
@@ -391,6 +425,12 @@ async function saveSupplier() {
         address: document.getElementById('supplierAddress').value
     };
 
+    // Prevent double-click
+    const saveBtn = document.getElementById('saveSupplierBtn');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+
     try {
         const response = await api(`/api/suppliers${id ? `/${id}` : ''}`, {
             method: id ? 'PUT' : 'POST',
@@ -408,6 +448,9 @@ async function saveSupplier() {
         loadSupplierOptions();
     } catch (error) {
         showToast(error.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar';
     }
 }
 

@@ -109,13 +109,12 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         const totalResult = await db.get('SELECT SUM(quantity * cost_price) as total FROM products');
         const stockValue = totalResult ? (totalResult.total || 0) : 0;
 
-        // Low stock alerts
+        // Low stock alerts (only active products, no limit)
         const lowStockProducts = await db.query(`
       SELECT id, sku, name, quantity, min_stock, unit_type
       FROM products 
-      WHERE quantity <= min_stock
+      WHERE quantity <= min_stock AND (is_active = 1 OR is_active IS NULL)
       ORDER BY quantity ASC
-      LIMIT 10
     `);
 
         // Recent movements

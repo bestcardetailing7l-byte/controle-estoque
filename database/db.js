@@ -185,6 +185,21 @@ class DatabaseAdapter {
             await this.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', ['admin', passwordHash]);
             console.log('✅ Admin user created');
         }
+
+        // Migration: Add is_active column to products if not exists
+        try {
+            const checkColumn = this.isPostgres
+                ? await this.get("SELECT column_name FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'is_active'")
+                : await this.get("SELECT * FROM pragma_table_info('products') WHERE name = 'is_active'");
+
+            if (!checkColumn) {
+                await this.run('ALTER TABLE products ADD COLUMN is_active INTEGER DEFAULT 1');
+                console.log('✅ Migration: Added is_active column to products');
+            }
+        } catch (err) {
+            // Column might already exist, ignore error
+            console.log('ℹ️ is_active column check completed');
+        }
     }
 }
 

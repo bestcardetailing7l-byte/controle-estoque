@@ -143,4 +143,26 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// Toggle product active status
+router.patch('/:id/toggle-active', authenticateToken, async (req, res) => {
+    try {
+        const existing = await db.get('SELECT * FROM products WHERE id = ?', [req.params.id]);
+        if (!existing) {
+            return res.status(404).json({ error: 'Produto não encontrado' });
+        }
+
+        const newStatus = existing.is_active === 1 ? 0 : 1;
+        await db.run('UPDATE products SET is_active = ? WHERE id = ?', [newStatus, req.params.id]);
+
+        const product = await db.get('SELECT * FROM products WHERE id = ?', [req.params.id]);
+        res.json({
+            message: newStatus === 1 ? 'Produto reativado!' : 'Produto desativado!',
+            product
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao alterar status do produto' });
+    }
+});
+
 module.exports = router;
