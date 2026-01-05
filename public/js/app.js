@@ -495,7 +495,7 @@ async function loadMovements() {
 
         const tbody = document.getElementById('movementsTable');
         if (movements.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhuma movimentação encontrada</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Nenhuma movimentação encontrada</td></tr>';
             return;
         }
 
@@ -512,7 +512,11 @@ async function loadMovements() {
           <td>${m.quantity}</td>
           <td>${formatCurrency(m.unit_cost)}</td>
           <td>${formatCurrency(m.quantity * m.unit_cost)}</td>
-          <td>${m.notes || '-'}</td>
+          <td class="notes-cell" title="${m.notes || ''}">${m.notes ? (m.notes.length > 30 ? m.notes.substring(0, 30) + '...' : m.notes) : '-'}</td>
+          <td>
+            <button class="btn btn-sm btn-secondary" onclick="editMovement(${m.id})" title="Editar">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteMovement(${m.id})" title="Excluir">🗑️</button>
+          </td>
         </tr>
       `;
         }).join('');
@@ -646,6 +650,91 @@ async function saveMovement() {
         loadMovements();
         loadDashboard();
         loadProducts(); // Refresh products to show new average cost
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
+// Edit Movement
+async function editMovement(id) {
+    try {
+        const response = await api(`/api/movements/${id}`);
+        if (!response.ok) throw new Error('Movimento não encontrado');
+
+        const movement = await response.json();
+
+        document.getElementById('editMovementId').value = movement.id;
+        document.getElementById('editMovementProduct').textContent = `${movement.product_name} (${movement.product_sku})`;
+        document.getElementById('editMovementType').textContent =
+            movement.type === 'entry' ? '📥 Entrada' : movement.type === 'exit' ? '📤 Saída' : '⚠️ Perda';
+        document.getElementById('editMovementQuantity').value = movement.quantity;
+        document.getElementById('editMovementUnitCost').value = movement.unit_cost;
+        document.getElementById('editMovementNotes').value = movement.notes || '';
+
+        openModal('editMovementModal');
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
+}
+
+async function saveEditedMovement() {
+    const id = document.getElementById('editMovementId').value;
+    const quantity = parseFloat(document.getElementById('editMovementQuantity').value);
+    const unit_cost = parseFloat(document.getElementById('editMovementUnitCost').value);
+    const notes = document.getElementById('editMovementNotes').value.trim();
+
+    if (!quantity || quantity <= 0) {
+        showToast('Quantidade deve ser maior que zero', 'error');
+        return;
+    }
+
+    const saveBtn = document.querySelector('#editMovementModal .btn-primary');
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+
+    try {
+        const response = await api(`/api/movements/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ quantity, unit_cost, notes })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error);
+        }
+
+        const result = await response.json();
+        showToast(`Movimentação atualizada! Estoque ajustado: ${result.inventoryChange > 0 ? '+' : ''}${result.inventoryChange}`);
+        closeModal('editMovementModal');
+        loadMovements();
+        loadDashboard();
+        loadProducts();
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+    }
+}
+
+// Delete Movement
+async function deleteMovement(id) {
+    if (!confirm('Tem certeza que deseja excluir esta movimentação?\n\nIsso irá reverter o efeito no estoque.')) return;
+
+    try {
+        const response = await api(`/api/movements/${id}`, { method: 'DELETE' });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error);
+        }
+
+        const result = await response.json();
+        showToast(`Movimentação excluída! Estoque ajustado: ${result.inventoryChange > 0 ? '+' : ''}${result.inventoryChange}`);
+        loadMovements();
+        loadDashboard();
+        loadProducts();
     } catch (error) {
         showToast(error.message, 'error');
     }
@@ -1062,6 +1151,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('saveExitReturnBtn').addEventListener('click', saveExitReturn);
     document.getElementById('quantityOut').addEventListener('input', calculateConsumption);
     document.getElementById('quantityReturn').addEventListener('input', calculateConsumption);
+
+    // Edit Movement
+    document.getElementById('saveEditMovementBtn').addEventListener('click', saveEditedMovement);
 
     // Reports
     document.getElementById('exportInventoryBtn').addEventListener('click', () => exportToExcel('inventory'));

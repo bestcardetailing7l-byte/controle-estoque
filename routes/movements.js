@@ -251,4 +251,148 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
+// Get single movement
+router.get('/:id', authenticateToken, async (req, res) => {
+    try {
+        const movement = await db.get(`
+      SELECT m.*, p.name as product_name, p.sku as product_sku
+      FROM movements m
+      JOIN products p ON m.product_id = p.id
+      WHERE m.id = ?
+    `, [req.params.id]);
+
+        if (!movement) {
+            return res.status(404).json({ error: 'Movimentação não encontrada' });
+        }
+
+        res.json(movement);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao buscar movimentação' });
+    }
+});
+
+// Edit movement (with inventory recalculation)
+router.put('/:id', authenticateToken, async (req, res) => {
+    try {
+        const { quantity, unit_cost, notes } = req.body;
+
+        // Get original movement
+        const originalMovement = await db.get('SELECT * FROM movements WHERE id = ?', [req.params.id]);
+        if (!originalMovement) {
+            return res.status(404).json({ error: 'Movimentação não encontrada' });
+        }
+
+        // Get product
+        const product = await db.get('SELECT * FROM products WHERE id = ?', [originalMovement.product_id]);
+        if (!product) {
+            return res.status(404).json({ error: 'Produto não encontrado' });
+        }
+
+        const newQuantity = quantity !== undefined ? parseFloat(quantity) : originalMovement.quantity;
+        const newUnitCost = unit_cost !== undefined ? parseFloat(unit_cost) : originalMovement.unit_cost;
+        const newNotes = notes !== undefined ? notes : originalMovement.notes;
+
+        if (newQuantity <= 0) {
+            return res.status(400).json({ error: 'Quantidade deve ser maior que zero' });
+        }
+
+        // Calculate inventory adjustment
+        // First, reverse the original movement effect
+        let inventoryAdjustment = 0;
+
+        if (originalMovement.type === 'entry') {
+            // Original entry added stock, so we subtract it
+            inventoryAdjustment -= originalMovement.quantity;
+        } else {
+            // Original exit/loss removed stock, so we add it back
+            inventoryAdjustment += originalMovement.quantity;
+        }
+
+        // Then apply the new movement effect
+        if (originalMovement.type === 'entry') {
+            inventoryAdjustment += newQuantity;
+        } else {
+            inventoryAdjustment -= newQuantity;
+        }
+
+        // Check if new inventory would be valid
+        const newInventory = product.quantity + inventoryAdjustment;
+        if (newInventory < 0) {
+            return res.status(400).json({ error: 'Edição resultaria em estoque negativo. Verifique a quantidade.' });
+        }
+
+        // Update movement
+        await db.run(`
+      UPDATE movements 
+      SET quantity = ?, unit_cost = ?, notes = ?
+      WHERE id = ?
+    `, [newQuantity, newUnitCost, newNotes, req.params.id]);
+
+        // Update product inventory
+        await db.run('UPDATE products SET quantity = ? WHERE id = ?', [newInventory, originalMovement.product_id]);
+
+        const updatedMovement = await db.get(`
+      SELECT m.*, p.name as product_name, p.sku as product_sku
+      FROM movements m
+      JOIN products p ON m.product_id = p.id
+      WHERE m.id = ?
+    `, [req.params.id]);
+
+        res.json({
+            message: 'Movimentação atualizada com sucesso',
+            movement: updatedMovement,
+            inventoryChange: inventoryAdjustment,
+            newInventory: newInventory
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao editar movimentação' });
+    }
+});
+
+// Delete movement (with inventory reversal)
+router.delete('/:id', authenticateToken, async (req, res) => {
+    try {
+        const movement = await db.get('SELECT * FROM movements WHERE id = ?', [req.params.id]);
+        if (!movement) {
+            return res.status(404).json({ error: 'Movimentação não encontrada' });
+        }
+
+        const product = await db.get('SELECT * FROM products WHERE id = ?', [movement.product_id]);
+        if (!product) {
+            return res.status(404).json({ error: 'Produto não encontrado' });
+        }
+
+        // Reverse the movement effect on inventory
+        let newInventory;
+        if (movement.type === 'entry') {
+            // Entry added stock, so we subtract it
+            newInventory = product.quantity - movement.quantity;
+        } else {
+            // Exit/loss removed stock, so we add it back
+            newInventory = product.quantity + movement.quantity;
+        }
+
+        if (newInventory < 0) {
+            return res.status(400).json({ error: 'Exclusão resultaria em estoque negativo.' });
+        }
+
+        // Delete movement
+        await db.run('DELETE FROM movements WHERE id = ?', [req.params.id]);
+
+        // Update product inventory
+        await db.run('UPDATE products SET quantity = ? WHERE id = ?', [newInventory, movement.product_id]);
+
+        res.json({
+            message: 'Movimentação excluída e estoque ajustado',
+            inventoryChange: movement.type === 'entry' ? -movement.quantity : movement.quantity,
+            newInventory: newInventory
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao excluir movimentação' });
+    }
+});
+
 module.exports = router;
