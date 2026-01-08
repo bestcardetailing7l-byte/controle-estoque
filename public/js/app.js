@@ -688,7 +688,22 @@ function onMovementProductChange() {
     const select = document.getElementById('movementProduct');
     const selectedOption = select.options[select.selectedIndex];
     const movementType = document.getElementById('movementType').value;
+    const brandGroup = document.getElementById('movementBrandGroup');
+    const brandDisplay = document.getElementById('movementBrandDisplay');
 
+    // Show brand info when product is selected
+    if (selectedOption && selectedOption.value) {
+        const product = products.find(p => p.id == selectedOption.value);
+        if (product) {
+            brandGroup.style.display = 'block';
+            brandDisplay.textContent = product.supplier_name || 'Sem marca definida';
+        }
+    } else {
+        brandGroup.style.display = 'none';
+        brandDisplay.textContent = '-';
+    }
+
+    // Set cost for entries
     if (movementType === 'entry' && selectedOption && selectedOption.dataset.cost) {
         const costField = document.getElementById('movementCost');
         costField.value = parseFloat(selectedOption.dataset.cost).toFixed(2);
