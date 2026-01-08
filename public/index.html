@@ -39,6 +39,10 @@
                     <span>Produtos</span>
                 </div>
                 <div class="nav-item" data-section="suppliers">
+                    <span>🏷️</span>
+                    <span>Marcas</span>
+                </div>
+                <div class="nav-item" data-section="vendors">
                     <span>🏢</span>
                     <span>Fornecedores</span>
                 </div>
@@ -223,17 +227,17 @@
             <!-- Suppliers Section -->
             <section id="suppliersSection" class="section">
                 <div class="page-header">
-                    <h1 class="page-title">Fornecedores</h1>
+                    <h1 class="page-title">Marcas</h1>
                     <div class="page-actions">
                         <button class="btn btn-primary" id="addSupplierBtn">
                             <span>➕</span>
-                            <span>Novo Fornecedor</span>
+                            <span>Nova Marca</span>
                         </button>
                     </div>
                 </div>
 
                 <div class="filters-bar">
-                    <input type="text" class="search-input" id="supplierSearch" placeholder="Pesquisar fornecedores...">
+                    <input type="text" class="search-input" id="supplierSearch" placeholder="🔍 Pesquisar marcas...">
                 </div>
 
                 <div class="card">
@@ -250,6 +254,40 @@
                                 </tr>
                             </thead>
                             <tbody id="suppliersTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vendors Section (Real Suppliers) -->
+            <section id="vendorsSection" class="section">
+                <div class="page-header">
+                    <h1 class="page-title">Fornecedores</h1>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" id="addVendorBtn">
+                            <span>➕</span>
+                            <span>Novo Fornecedor</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filters-bar">
+                    <input type="text" class="search-input" id="vendorSearch"
+                        placeholder="🔍 Pesquisar fornecedores...">
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Telefone</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vendorsTable">
                             </tbody>
                         </table>
                     </div>
@@ -495,7 +533,7 @@
     <div class="modal-overlay" id="supplierModal">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title" id="supplierModalTitle">Novo Fornecedor</h3>
+                <h3 class="modal-title" id="supplierModalTitle">Nova Marca</h3>
                 <button class="modal-close" data-close="supplierModal">&times;</button>
             </div>
             <div class="modal-body">
@@ -532,6 +570,33 @@
         </div>
     </div>
 
+    <!-- Vendor Modal -->
+    <div class="modal-overlay" id="vendorModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="vendorModalTitle">Novo Fornecedor</h3>
+                <button class="modal-close" data-close="vendorModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="vendorForm">
+                    <input type="hidden" id="vendorId">
+                    <div class="form-group">
+                        <label for="vendorName">Nome *</label>
+                        <input type="text" id="vendorName" required placeholder="Ex: Distribuidora São Paulo">
+                    </div>
+                    <div class="form-group">
+                        <label for="vendorPhone">Telefone</label>
+                        <input type="tel" id="vendorPhone" placeholder="(11) 99999-9999">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-close="vendorModal">Cancelar</button>
+                <button class="btn btn-primary" id="saveVendorBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Movement Modal -->
     <div class="modal-overlay" id="movementModal">
         <div class="modal">
@@ -558,10 +623,10 @@
                             <input type="number" id="movementCost" step="0.01" min="0">
                         </div>
                     </div>
-                    <div class="form-group" id="movementSupplierGroup">
-                        <label for="movementSupplier">Fornecedor (de qual fornecedor veio?)</label>
-                        <select id="movementSupplier">
-                            <option value="">Nenhum / Não informar</option>
+                    <div class="form-group" id="movementVendorGroup">
+                        <label for="movementVendor">Fornecedor (de quem comprou?)</label>
+                        <select id="movementVendor">
+                            <option value="">Selecione o fornecedor</option>
                         </select>
                     </div>
                     <div class="form-group">

@@ -20,12 +20,14 @@ const productsRoutes = require('./routes/products');
 const suppliersRoutes = require('./routes/suppliers');
 const movementsRoutes = require('./routes/movements');
 const reportsRoutes = require('./routes/reports');
+const vendorsRoutes = require('./routes/vendors');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/suppliers', suppliersRoutes);
 app.use('/api/movements', movementsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/vendors', vendorsRoutes);
 
 // Default route - serve login page
 app.get('/', (req, res) => {

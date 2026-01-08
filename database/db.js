@@ -136,6 +136,13 @@ class DatabaseAdapter {
         notes TEXT,
         created_at ${this.isPostgres ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      )`,
+            // Vendors (real suppliers - companies/people they buy from)
+            `CREATE TABLE IF NOT EXISTS vendors (
+        id ${this.isPostgres ? 'SERIAL' : 'INTEGER'} PRIMARY KEY ${this.isPostgres ? '' : 'AUTOINCREMENT'},
+        name TEXT NOT NULL,
+        phone TEXT,
+        created_at ${this.isPostgres ? 'TIMESTAMP' : 'DATETIME'} DEFAULT CURRENT_TIMESTAMP
       )`
         ];
 
@@ -209,6 +216,20 @@ class DatabaseAdapter {
         } catch (err) {
             // Column might already exist, ignore error
             console.log('ℹ️ is_active column check completed');
+        }
+
+        // Migration: Add vendor_id column to movements if not exists
+        try {
+            const checkVendorCol = this.isPostgres
+                ? await this.get("SELECT column_name FROM information_schema.columns WHERE table_name = 'movements' AND column_name = 'vendor_id'")
+                : await this.get("SELECT * FROM pragma_table_info('movements') WHERE name = 'vendor_id'");
+
+            if (!checkVendorCol) {
+                await this.run('ALTER TABLE movements ADD COLUMN vendor_id INTEGER');
+                console.log('✅ Migration: Added vendor_id column to movements');
+            }
+        } catch (err) {
+            console.log('ℹ️ vendor_id column check completed');
         }
     }
 }

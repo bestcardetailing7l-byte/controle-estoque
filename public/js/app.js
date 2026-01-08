@@ -98,6 +98,9 @@ function navigateTo(section) {
         case 'suppliers':
             loadSuppliers();
             break;
+        case 'vendors':
+            loadVendors();
+            break;
         case 'movements':
             loadMovements();
             break;
@@ -461,15 +464,149 @@ function editSupplier(id) {
 }
 
 async function deleteSupplier(id) {
-    if (!confirm('Tem certeza que deseja excluir este fornecedor?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta marca?')) return;
 
     try {
         const response = await api(`/api/suppliers/${id}`, { method: 'DELETE' });
         if (!response.ok) throw new Error('Erro ao excluir');
 
-        showToast('Fornecedor excluído!');
+        showToast('Marca excluída!');
         loadSuppliers();
         loadSupplierOptions();
+    } catch (error) {
+        showToast('Erro ao excluir marca', 'error');
+    }
+}
+
+// ===== VENDORS (Real Suppliers) =====
+let vendors = [];
+
+async function loadVendors() {
+    try {
+        const search = document.getElementById('vendorSearch').value;
+        let url = '/api/vendors';
+        if (search) url += `?search=${encodeURIComponent(search)}`;
+
+        const response = await api(url);
+        if (!response.ok) throw new Error('Erro ao carregar');
+
+        vendors = await response.json();
+
+        const tbody = document.getElementById('vendorsTable');
+        if (vendors.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Nenhum fornecedor cadastrado</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = vendors.map(v => `
+      <tr>
+        <td>${v.name}</td>
+        <td>${v.phone || '-'}</td>
+        <td>
+          <button class="btn btn-sm btn-secondary" onclick="editVendor(${v.id})">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteVendor(${v.id})">🗑️</button>
+        </td>
+      </tr>
+    `).join('');
+    } catch (error) {
+        console.error('Error loading vendors:', error);
+        showToast('Erro ao carregar fornecedores', 'error');
+    }
+}
+
+async function loadVendorOptions() {
+    try {
+        const response = await api('/api/vendors');
+        if (!response.ok) return;
+
+        vendors = await response.json();
+        const vendorSelect = document.getElementById('movementVendor');
+        if (vendorSelect) {
+            vendorSelect.innerHTML = '<option value="">Selecione o fornecedor</option>' +
+                vendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('Error loading vendor options:', error);
+    }
+}
+
+async function openVendorModal(id = null) {
+    document.getElementById('vendorForm').reset();
+    document.getElementById('vendorId').value = '';
+    document.getElementById('vendorModalTitle').textContent = id ? 'Editar Fornecedor' : 'Novo Fornecedor';
+
+    if (id) {
+        try {
+            const response = await api(`/api/vendors/${id}`);
+            if (!response.ok) throw new Error('Erro ao carregar');
+
+            const vendor = await response.json();
+            document.getElementById('vendorId').value = vendor.id;
+            document.getElementById('vendorName').value = vendor.name;
+            document.getElementById('vendorPhone').value = vendor.phone || '';
+        } catch (error) {
+            showToast('Erro ao carregar fornecedor', 'error');
+            return;
+        }
+    }
+
+    openModal('vendorModal');
+}
+
+async function saveVendor() {
+    const id = document.getElementById('vendorId').value;
+    const data = {
+        name: document.getElementById('vendorName').value.trim(),
+        phone: document.getElementById('vendorPhone').value.trim()
+    };
+
+    if (!data.name) {
+        showToast('Nome é obrigatório', 'error');
+        return;
+    }
+
+    const saveBtn = document.getElementById('saveVendorBtn');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+
+    try {
+        const response = await api(`/api/vendors${id ? `/${id}` : ''}`, {
+            method: id ? 'PUT' : 'POST',
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error);
+        }
+
+        showToast(id ? 'Fornecedor atualizado!' : 'Fornecedor criado!');
+        closeModal('vendorModal');
+        loadVendors();
+        loadVendorOptions();
+    } catch (error) {
+        showToast(error.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar';
+    }
+}
+
+function editVendor(id) {
+    openVendorModal(id);
+}
+
+async function deleteVendor(id) {
+    if (!confirm('Tem certeza que deseja excluir este fornecedor?')) return;
+
+    try {
+        const response = await api(`/api/vendors/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Erro ao excluir');
+
+        showToast('Fornecedor excluído!');
+        loadVendors();
+        loadVendorOptions();
     } catch (error) {
         showToast('Erro ao excluir fornecedor', 'error');
     }
@@ -571,34 +708,34 @@ function openMovementModal(type) {
     };
     document.getElementById('movementModalTitle').textContent = titles[type];
 
-    // Show/hide cost and supplier fields (only for entry)
+    // Show/hide cost and vendor fields (only for entry)
     const costGroup = document.getElementById('movementCostGroup');
-    const supplierGroup = document.getElementById('movementSupplierGroup');
+    const vendorGroup = document.getElementById('movementVendorGroup');
     costGroup.classList.toggle('hidden', type !== 'entry');
-    supplierGroup.classList.toggle('hidden', type !== 'entry');
+    vendorGroup.classList.toggle('hidden', type !== 'entry');
 
-    // Load suppliers for entry modal
+    // Load vendors for entry modal
     if (type === 'entry') {
-        loadMovementSupplierOptions();
+        loadMovementVendorOptions();
     }
 
     openModal('movementModal');
 }
 
-async function loadMovementSupplierOptions() {
+async function loadMovementVendorOptions() {
     try {
-        const response = await api('/api/suppliers');
+        const response = await api('/api/vendors');
         if (!response.ok) return;
 
-        const suppliersList = await response.json();
+        const vendorsList = await response.json();
 
-        const select = document.getElementById('movementSupplier');
-        select.innerHTML = '<option value="">Nenhum / Não informar</option>';
-        suppliersList.forEach(s => {
-            select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+        const select = document.getElementById('movementVendor');
+        select.innerHTML = '<option value="">Selecione o fornecedor</option>';
+        vendorsList.forEach(v => {
+            select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
         });
     } catch (error) {
-        console.error('Error loading suppliers:', error);
+        console.error('Error loading vendors:', error);
     }
 }
 
@@ -607,7 +744,7 @@ async function saveMovement() {
     const productId = document.getElementById('movementProduct').value;
     const quantity = parseFloat(document.getElementById('movementQuantity').value);
     const unitCost = parseFloat(document.getElementById('movementCost').value) || 0;
-    const supplierId = document.getElementById('movementSupplier').value;
+    const vendorId = document.getElementById('movementVendor').value;
     const notes = document.getElementById('movementNotes').value;
 
     if (!productId || !quantity) {
@@ -623,9 +760,9 @@ async function saveMovement() {
             notes
         };
 
-        // Add supplier_id only for entries
-        if (type === 'entry' && supplierId) {
-            body.supplier_id = parseInt(supplierId);
+        // Add vendor_id only for entries
+        if (type === 'entry' && vendorId) {
+            body.vendor_id = parseInt(vendorId);
         }
 
         const response = await api(`/api/movements/${type}`, {
@@ -1143,10 +1280,15 @@ document.addEventListener('DOMContentLoaded', () => {
         loadProducts();
     });
 
-    // Suppliers
+    // Suppliers (now Marcas)
     document.getElementById('addSupplierBtn').addEventListener('click', () => openSupplierModal());
     document.getElementById('saveSupplierBtn').addEventListener('click', saveSupplier);
     document.getElementById('supplierSearch').addEventListener('input', debounce(loadSuppliers, 300));
+
+    // Vendors (Fornecedores)
+    document.getElementById('addVendorBtn').addEventListener('click', () => openVendorModal());
+    document.getElementById('saveVendorBtn').addEventListener('click', saveVendor);
+    document.getElementById('vendorSearch').addEventListener('input', debounce(loadVendors, 300));
 
     // Movements
     document.getElementById('addEntryBtn').addEventListener('click', () => openMovementModal('entry'));

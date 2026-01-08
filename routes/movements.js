@@ -6,7 +6,7 @@ const { authenticateToken } = require('../middleware/auth');
 // Entry (add stock) - with weighted average cost and optional supplier
 router.post('/entry', authenticateToken, async (req, res) => {
     try {
-        const { product_id, quantity, unit_cost, supplier_id, notes } = req.body;
+        const { product_id, quantity, unit_cost, vendor_id, notes } = req.body;
 
         if (!product_id || !quantity || quantity <= 0) {
             return res.status(400).json({ error: 'Produto e quantidade válida são obrigatórios' });
@@ -28,20 +28,20 @@ router.post('/entry', authenticateToken, async (req, res) => {
             ? parseFloat(((currentValue + entryValue) / newQuantity).toFixed(2))
             : entryCost;
 
-        // Build notes with supplier info if provided
+        // Build notes with vendor info if provided
         let fullNotes = notes || '';
-        if (supplier_id) {
-            const supplier = await db.get('SELECT name FROM suppliers WHERE id = ?', [supplier_id]);
-            if (supplier) {
-                fullNotes = `Fornecedor: ${supplier.name}${notes ? ' | ' + notes : ''}`;
+        if (vendor_id) {
+            const vendor = await db.get('SELECT name FROM vendors WHERE id = ?', [vendor_id]);
+            if (vendor) {
+                fullNotes = `Fornecedor: ${vendor.name}${notes ? ' | ' + notes : ''}`;
             }
         }
 
-        // Create movement
+        // Create movement with vendor_id
         await db.run(`
-      INSERT INTO movements (product_id, type, quantity, unit_cost, notes)
-      VALUES (?, 'entry', ?, ?, ?)
-    `, [product_id, quantity, entryCost, fullNotes]);
+      INSERT INTO movements (product_id, type, quantity, unit_cost, notes, vendor_id)
+      VALUES (?, 'entry', ?, ?, ?, ?)
+    `, [product_id, quantity, entryCost, fullNotes, vendor_id || null]);
 
         // Update stock with weighted average cost
         await db.run('UPDATE products SET quantity = ?, cost_price = ? WHERE id = ?', [newQuantity, newCostPrice, product_id]);
