@@ -82,6 +82,16 @@ class DatabaseAdapter {
     async initSchema() {
         console.log('🏗️ Initializing Database Schema...');
 
+        // Enable unaccent extension for PostgreSQL (accent-insensitive search)
+        if (this.isPostgres) {
+            try {
+                await this.run('CREATE EXTENSION IF NOT EXISTS unaccent');
+                console.log('✅ PostgreSQL unaccent extension enabled');
+            } catch (err) {
+                console.log('ℹ️ unaccent extension may already exist or not available');
+            }
+        }
+
         // Schema scripts
         const tables = [
             // Users

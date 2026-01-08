@@ -25,11 +25,27 @@ router.get('/', authenticateToken, async (req, res) => {
         const params = [];
 
         if (search) {
-            // Use ILIKE for PostgreSQL (case-insensitive), LIKE for SQLite
-            const likeOperator = db.isPostgres ? 'ILIKE' : 'LIKE';
-            query += ` AND (p.name ${likeOperator} ? OR p.sku ${likeOperator} ? OR p.description ${likeOperator} ?)`;
+            // Remove accents from search term for accent-insensitive search
+            const normalizedSearch = search.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const searchTerm = `%${search}%`;
-            params.push(searchTerm, searchTerm, searchTerm);
+            const normalizedTerm = `%${normalizedSearch}%`;
+
+            if (db.isPostgres) {
+                // PostgreSQL: use translate() to remove accents (built-in, no extension needed)
+                // Search both original and normalized for best results
+                query += ` AND (
+                    LOWER(p.name) LIKE LOWER($${params.length + 1}) OR
+                    LOWER(translate(p.name, 'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ', 'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN')) LIKE LOWER($${params.length + 2}) OR
+                    LOWER(p.sku) LIKE LOWER($${params.length + 3}) OR
+                    LOWER(COALESCE(p.description, '')) LIKE LOWER($${params.length + 4}) OR
+                    LOWER(translate(COALESCE(p.description, ''), 'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ', 'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN')) LIKE LOWER($${params.length + 5})
+                )`;
+                params.push(searchTerm, normalizedTerm, searchTerm, searchTerm, normalizedTerm);
+            } else {
+                // SQLite: use normalized search
+                query += ' AND (LOWER(p.name) LIKE LOWER(?) OR LOWER(p.sku) LIKE LOWER(?) OR LOWER(p.description) LIKE LOWER(?))';
+                params.push(normalizedTerm, searchTerm, normalizedTerm);
+            }
         }
 
         if (supplier_id) {
