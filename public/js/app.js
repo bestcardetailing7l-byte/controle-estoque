@@ -182,11 +182,13 @@ async function loadProducts() {
         const search = document.getElementById('productSearch').value;
         const supplier = document.getElementById('supplierFilter').value;
         const lowStock = document.getElementById('lowStockFilter').checked;
+        const activeOnly = document.getElementById('activeOnlyFilter').checked;
 
         let url = '/api/products?';
         if (search) url += `search=${encodeURIComponent(search)}&`;
         if (supplier) url += `supplier_id=${supplier}&`;
         if (lowStock) url += `low_stock=true&`;
+        if (activeOnly) url += `active_only=true&`;
 
         const response = await api(url);
         if (!response.ok) throw new Error('Erro ao carregar produtos');
@@ -195,7 +197,7 @@ async function loadProducts() {
 
         const tbody = document.getElementById('productsTable');
         if (products.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Nenhum produto encontrado</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Nenhum produto encontrado</td></tr>';
             return;
         }
 
@@ -1129,6 +1131,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('productSearch').addEventListener('input', debounce(loadProducts, 300));
     document.getElementById('supplierFilter').addEventListener('change', loadProducts);
     document.getElementById('lowStockFilter').addEventListener('change', loadProducts);
+
+    // Active Only Filter with persistence
+    const activeOnlyFilter = document.getElementById('activeOnlyFilter');
+    const savedActiveOnly = localStorage.getItem('showActiveOnly');
+    if (savedActiveOnly !== null) {
+        activeOnlyFilter.checked = savedActiveOnly === 'true';
+    }
+    activeOnlyFilter.addEventListener('change', () => {
+        localStorage.setItem('showActiveOnly', activeOnlyFilter.checked);
+        loadProducts();
+    });
 
     // Suppliers
     document.getElementById('addSupplierBtn').addEventListener('click', () => openSupplierModal());

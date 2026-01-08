@@ -14,7 +14,7 @@ function generateSKU() {
 // Get all products
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const { search, supplier_id, low_stock } = req.query;
+        const { search, supplier_id, low_stock, active_only } = req.query;
 
         let query = `
       SELECT p.*, s.name as supplier_name 
@@ -55,6 +55,10 @@ router.get('/', authenticateToken, async (req, res) => {
 
         if (low_stock === 'true') {
             query += ' AND p.quantity <= p.min_stock';
+        }
+
+        if (active_only === 'true') {
+            query += ' AND (p.is_active = 1 OR p.is_active IS NULL)';
         }
 
         query += ' ORDER BY p.name ASC';
