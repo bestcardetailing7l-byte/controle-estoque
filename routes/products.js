@@ -25,7 +25,9 @@ router.get('/', authenticateToken, async (req, res) => {
         const params = [];
 
         if (search) {
-            query += ' AND (p.name LIKE ? OR p.sku LIKE ? OR p.description LIKE ?)';
+            // Use ILIKE for PostgreSQL (case-insensitive), LIKE for SQLite
+            const likeOperator = db.isPostgres ? 'ILIKE' : 'LIKE';
+            query += ` AND (p.name ${likeOperator} ? OR p.sku ${likeOperator} ? OR p.description ${likeOperator} ?)`;
             const searchTerm = `%${search}%`;
             params.push(searchTerm, searchTerm, searchTerm);
         }
