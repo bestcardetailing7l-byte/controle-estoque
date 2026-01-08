@@ -447,7 +447,7 @@ async function saveSupplier() {
             throw new Error(error.error);
         }
 
-        showToast(id ? 'Fornecedor atualizado!' : 'Fornecedor criado!');
+        showToast(id ? 'Marca atualizada!' : 'Marca criada!');
         closeModal('supplierModal');
         loadSuppliers();
         loadSupplierOptions();
