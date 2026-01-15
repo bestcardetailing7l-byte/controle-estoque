@@ -223,6 +223,7 @@ async function loadProducts() {
         <td>${formatCurrency(p.quantity * p.cost_price)}</td>
         <td>${p.supplier_name || '-'}</td>
         <td>
+          <button class="btn btn-sm btn-info" onclick="openPriceHistoryModal(${p.id})" title="Histórico de Preços">💲</button>
           <button class="btn btn-sm btn-secondary" onclick="editProduct(${p.id})" title="Editar">✏️</button>
           <button class="btn btn-sm ${isInactive ? 'btn-success' : 'btn-warning'}" onclick="toggleProductActive(${p.id})" title="${toggleTitle}">${toggleIcon}</button>
           <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})" title="Excluir">🗑️</button>
@@ -739,14 +740,15 @@ function openMovementModal(type) {
     openModal('movementModal');
 }
 
-async function loadMovementVendorOptions() {
+async function loadMovementVendorOptions(selectId = 'movementVendor') {
     try {
         const response = await api('/api/vendors');
         if (!response.ok) return;
 
         const vendorsList = await response.json();
 
-        const select = document.getElementById('movementVendor');
+        const select = document.getElementById(selectId);
+        if (!select) return;
         select.innerHTML = '<option value="">Selecione o fornecedor</option>';
         vendorsList.forEach(v => {
             select.innerHTML += `<option value="${v.id}">${v.name}</option>`;
@@ -827,6 +829,18 @@ async function editMovement(id) {
         document.getElementById('editMovementUnitCost').value = movement.unit_cost;
         document.getElementById('editMovementNotes').value = movement.notes || '';
 
+        // Handle Vendor Field for Entries
+        const vendorGroup = document.getElementById('editMovementVendorGroup');
+        if (movement.type === 'entry') {
+            vendorGroup.style.display = 'block';
+            await loadMovementVendorOptions('editMovementVendor');
+            if (movement.vendor_id) {
+                document.getElementById('editMovementVendor').value = movement.vendor_id;
+            }
+        } else {
+            vendorGroup.style.display = 'none';
+        }
+
         openModal('editMovementModal');
     } catch (error) {
         showToast(error.message, 'error');
@@ -838,6 +852,7 @@ async function saveEditedMovement() {
     const quantity = parseFloat(document.getElementById('editMovementQuantity').value);
     const unit_cost = parseFloat(document.getElementById('editMovementUnitCost').value);
     const notes = document.getElementById('editMovementNotes').value.trim();
+    const vendor_id = document.getElementById('editMovementVendor').value;
 
     if (!quantity || quantity <= 0) {
         showToast('Quantidade deve ser maior que zero', 'error');
@@ -852,7 +867,7 @@ async function saveEditedMovement() {
     try {
         const response = await api(`/api/movements/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ quantity, unit_cost, notes })
+            body: JSON.stringify({ quantity, unit_cost, notes, vendor_id })
         });
 
         if (!response.ok) {
@@ -1369,6 +1384,63 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSupplierOptions();
     loadDashboard();
 });
+
+// ===== PRICE HISTORY =====
+async function openPriceHistoryModal(productId) {
+    try {
+        const product = products.find(p => p.id == productId);
+        if (!product) return;
+
+        document.getElementById('priceHistoryProduct').textContent = `${product.name} (${product.sku})`;
+        openModal('priceHistoryModal');
+        await loadPriceHistory(productId);
+    } catch (error) {
+        showToast('Erro ao abrir histórico', 'error');
+    }
+}
+
+async function loadPriceHistory(productId) {
+    const tbody = document.getElementById('priceHistoryTable');
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Carregando...</td></tr>';
+
+    try {
+        const response = await api(`/api/movements?product_id=${productId}&type=entry`);
+        if (!response.ok) throw new Error('Erro ao carregar histórico');
+
+        const movements = await response.json();
+
+        if (movements.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhuma compra registrada</td></tr>';
+            return;
+        }
+
+        // Find lowest price
+        const prices = movements.map(m => parseFloat(m.unit_cost || 0));
+        const minPrice = Math.min(...prices.filter(p => p > 0));
+
+        tbody.innerHTML = movements.map(m => {
+            const cost = parseFloat(m.unit_cost || 0);
+            const isLowest = cost > 0 && cost === minPrice;
+            const badge = isLowest ? '<span class="badge badge-success ml-1">Melhor Preço</span>' : '';
+            const vendorName = m.vendor_name || 'Não informado';
+
+            return `
+                <tr ${isLowest ? 'style="background-color: #d4edda;"' : ''}>
+                    <td>${new Date(m.created_at).toLocaleDateString()}</td>
+                    <td>${vendorName}</td>
+                    <td>${m.quantity}</td>
+                    <td>
+                        ${formatCurrency(cost)} 
+                        ${badge}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error(error);
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+    }
+}
 
 // Utility: Debounce
 function debounce(func, wait) {

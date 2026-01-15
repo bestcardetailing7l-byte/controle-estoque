@@ -711,6 +711,12 @@
                         <label>Tipo</label>
                         <p id="editMovementType" class="form-static"></p>
                     </div>
+                    <div class="form-group" id="editMovementVendorGroup" style="display: none;">
+                        <label for="editMovementVendor">Fornecedor (de quem comprou?)</label>
+                        <select id="editMovementVendor">
+                            <option value="">Selecione o fornecedor</option>
+                        </select>
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="editMovementQuantity">Quantidade *</label>
@@ -734,6 +740,40 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-close="editMovementModal">Cancelar</button>
                 <button class="btn btn-primary" id="saveEditMovementBtn">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Price History Modal -->
+    <div class="modal-overlay" id="priceHistoryModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title">💲 Histórico de Compras</h3>
+                <button class="modal-close" data-close="priceHistoryModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <h3 id="priceHistoryProduct" class="text-primary mb-2">Produto</h3>
+                    <p class="text-sm text-muted">Abaixo estão listadas todas as compras deste produto. O menor preço
+                        está destacado.</p>
+                </div>
+                <div class="table-container header-fixed" style="max-height: 400px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Fornecedor</th>
+                                <th>Qtd</th>
+                                <th>Custo Unit.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="priceHistoryTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-close="priceHistoryModal">Fechar</button>
             </div>
         </div>
     </div>

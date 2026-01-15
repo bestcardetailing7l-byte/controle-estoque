@@ -195,9 +195,10 @@ router.get('/', authenticateToken, async (req, res) => {
         const { product_id, type, start_date, end_date, period, search } = req.query;
 
         let query = `
-      SELECT m.*, p.name as product_name, p.sku as product_sku
+      SELECT m.*, p.name as product_name, p.sku as product_sku, v.name as vendor_name
       FROM movements m
       JOIN products p ON m.product_id = p.id
+      LEFT JOIN vendors v ON m.vendor_id = v.id
       WHERE 1=1
     `;
         const params = [];
@@ -313,6 +314,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
         const newQuantity = quantity !== undefined ? parseFloat(quantity) : originalMovement.quantity;
         const newUnitCost = unit_cost !== undefined ? parseFloat(unit_cost) : originalMovement.unit_cost;
         const newNotes = notes !== undefined ? notes : originalMovement.notes;
+        const newVendorId = vendor_id !== undefined ? (vendor_id ? parseInt(vendor_id) : null) : originalMovement.vendor_id;
 
         if (newQuantity <= 0) {
             return res.status(400).json({ error: 'Quantidade deve ser maior que zero' });
@@ -346,9 +348,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
         // Update movement
         await db.run(`
       UPDATE movements 
-      SET quantity = ?, unit_cost = ?, notes = ?
+      SET quantity = ?, unit_cost = ?, notes = ?, vendor_id = ?
       WHERE id = ?
-    `, [newQuantity, newUnitCost, newNotes, req.params.id]);
+    `, [newQuantity, newUnitCost, newNotes, newVendorId, req.params.id]); `, [newQuantity, newUnitCost, newNotes, req.params.id]);
 
         // Update product inventory
         await db.run('UPDATE products SET quantity = ? WHERE id = ?', [newInventory, originalMovement.product_id]);
@@ -358,7 +360,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       FROM movements m
       JOIN products p ON m.product_id = p.id
       WHERE m.id = ?
-    `, [req.params.id]);
+            `, [req.params.id]);
 
         res.json({
             message: 'Movimentação atualizada com sucesso',
