@@ -192,7 +192,7 @@ router.post('/exit-return', authenticateToken, async (req, res) => {
 // Get movements with filters
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const { product_id, type, start_date, end_date, period } = req.query;
+        const { product_id, type, start_date, end_date, period, search } = req.query;
 
         let query = `
       SELECT m.*, p.name as product_name, p.sku as product_sku
@@ -201,6 +201,27 @@ router.get('/', authenticateToken, async (req, res) => {
       WHERE 1=1
     `;
         const params = [];
+
+        if (search) {
+            // Remove accents from search term for accent-insensitive search
+            const normalizedSearch = search.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const searchTerm = `%${search}%`;
+            const normalizedTerm = `%${normalizedSearch}%`;
+
+            if (db.isPostgres) {
+                // PostgreSQL: use translate()
+                query += ` AND (
+                    LOWER(p.name) LIKE LOWER($${params.length + 1}) OR
+                    LOWER(translate(p.name, 'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ', 'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN')) LIKE LOWER($${params.length + 2}) OR
+                    LOWER(p.sku) LIKE LOWER($${params.length + 3})
+                )`;
+                params.push(searchTerm, normalizedTerm, searchTerm);
+            } else {
+                // SQLite
+                query += ' AND (LOWER(p.name) LIKE LOWER(?) OR LOWER(p.sku) LIKE LOWER(?))';
+                params.push(normalizedTerm, searchTerm);
+            }
+        }
 
         if (product_id) {
             query += ' AND m.product_id = ?';

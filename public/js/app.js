@@ -619,10 +619,12 @@ async function loadMovements() {
         const type = document.getElementById('typeFilter').value;
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
+        const search = document.getElementById('movementSearch') ? document.getElementById('movementSearch').value : '';
 
         let url = '/api/movements?';
         if (period && period !== 'custom') url += `period=${period}&`;
         if (type) url += `type=${type}&`;
+        if (search) url += `search=${encodeURIComponent(search)}&`;
         if (period === 'custom' && startDate && endDate) {
             url += `start_date=${startDate}&end_date=${endDate}&`;
         }
@@ -1311,6 +1313,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('addLossBtn').addEventListener('click', () => openMovementModal('loss'));
     document.getElementById('saveMovementBtn').addEventListener('click', saveMovement);
     document.getElementById('movementProduct').addEventListener('change', onMovementProductChange);
+    if (document.getElementById('movementSearch')) {
+        document.getElementById('movementSearch').addEventListener('input', debounce(loadMovements, 300));
+    }
     document.getElementById('periodFilter').addEventListener('change', (e) => {
         document.getElementById('customDateFilter').classList.toggle('hidden', e.target.value !== 'custom');
     });
