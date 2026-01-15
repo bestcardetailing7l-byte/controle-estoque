@@ -297,7 +297,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Edit movement (with inventory recalculation)
 router.put('/:id', authenticateToken, async (req, res) => {
     try {
-        const { quantity, unit_cost, notes } = req.body;
+        const { quantity, unit_cost, notes, vendor_id } = req.body;
 
         // Get original movement
         const originalMovement = await db.get('SELECT * FROM movements WHERE id = ?', [req.params.id]);
@@ -350,7 +350,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       UPDATE movements 
       SET quantity = ?, unit_cost = ?, notes = ?, vendor_id = ?
       WHERE id = ?
-    `, [newQuantity, newUnitCost, newNotes, newVendorId, req.params.id]); `, [newQuantity, newUnitCost, newNotes, req.params.id]);
+    `, [newQuantity, newUnitCost, newNotes, newVendorId, req.params.id]);
 
         // Update product inventory
         await db.run('UPDATE products SET quantity = ? WHERE id = ?', [newInventory, originalMovement.product_id]);
