@@ -209,13 +209,13 @@ router.get('/', authenticateToken, async (req, res) => {
             const normalizedTerm = `%${normalizedSearch}%`;
 
             if (db.isPostgres) {
-                // PostgreSQL: use translate()
+                // PostgreSQL: use ILIKE for case-insensitive search
+                // Using simple ILIKE to avoid complexity/errors with translate
                 query += ` AND (
-                    LOWER(p.name) LIKE LOWER($${params.length + 1}) OR
-                    LOWER(translate(p.name, 'áàâãäéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ', 'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN')) LIKE LOWER($${params.length + 2}) OR
-                    LOWER(p.sku) LIKE LOWER($${params.length + 3})
+                    p.name ILIKE ? OR
+                    p.sku ILIKE ?
                 )`;
-                params.push(searchTerm, normalizedTerm, searchTerm);
+                params.push(searchTerm, searchTerm);
             } else {
                 // SQLite
                 query += ' AND (LOWER(p.name) LIKE LOWER(?) OR LOWER(p.sku) LIKE LOWER(?))';
